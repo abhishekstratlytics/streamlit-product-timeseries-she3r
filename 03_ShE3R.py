@@ -148,6 +148,15 @@ def win(df,models,metric,d):
 def display_winning_model(models,index):
     print(f'The winner model is {models[index]} model')
 
+# Returns the Dataframe of models and metrics
+def metrics_table(data,data_test_pred,actual_data,list_metric,models,d):
+    metrics_table=pd.DataFrame(columns=models)
+    for i in models:
+        metrics_table[i] = list(metrics(data_test_pred[i],actual_data))
+    metrics_table['Metric']=list_metric
+    metrics_table = metrics_table.set_index('Metric')
+    return metrics_table
+
 
 
 
@@ -219,13 +228,71 @@ def main():
         # z= rf_prediction(train_test_data_prep_reg(data,periods_of_forecast,training_periods)[0],
         #                     train_test_data_prep_reg(data,periods_of_forecast,training_periods)[2],
         #                     train_test_data_prep_reg(data,periods_of_forecast,training_periods)[1])
-        z = xgb_prediction(train_test_data_prep_reg(data,periods_of_forecast,training_periods)[0],
-                            train_test_data_prep_reg(data,periods_of_forecast,training_periods)[2],
-                            train_test_data_prep_reg(data,periods_of_forecast,training_periods)[1])
-        #z = ma12_prediction(train_test_data_prep_ts(data,training_periods)[0],periods_of_forecast)
+        # z = xgb_prediction(train_test_data_prep_reg(data,periods_of_forecast,training_periods)[0],
+        #                     train_test_data_prep_reg(data,periods_of_forecast,training_periods)[2],
+        #                     train_test_data_prep_reg(data,periods_of_forecast,training_periods)[1])
+        z = ar_prediction(data,d,forecast_periods)
         st.write(z)
+        models = ['ARIMA','SARIMA','Moving Average','Random Forest','XGBoost','Average'] #Change here when add/delete model
+        models_without_average = ['ARIMA','SARIMA','Moving Average','Random Forest','XGBoost'] #Change here when add/delete model
+        list_of_metrics=['RMSE','MAPE','MAE'] #Change here when add/delete metric
+        test_values = {models[0]:ar_prediction(train_test_data_prep_ts(data,training_periods)[0],d,len(train_test_data_prep_ts(data,training_periods)[1])),models[1]:sarima_prediction(train_test_data_prep_ts(data,training_periods)[0],d,len(train_test_data_prep_ts(data,training_periods)[1])),models[2]:ma12_prediction(train_test_data_prep_ts(data,training_periods)[0],len(train_test_data_prep_ts(data,training_periods)[1])),models[3]: rf_prediction(train_test_data_prep_reg(data,forecast_periods,training_periods)[0],train_test_data_prep_reg(data,forecast_periods,training_periods)[2],train_test_data_prep_reg(data,forecast_periods,training_periods)[1]),models[4]:xgb_prediction(train_test_data_prep_reg(data,forecast_periods,training_periods)[0],train_test_data_prep_reg(data,forecast_periods,training_periods)[2],train_test_data_prep_reg(data,forecast_periods,training_periods)[1])}
+        test_values = pd.DataFrame(test_values)
         
+        test_values = test_values.reset_index(drop=True)
+        st.write(test_values)
+        test_df = train_test_data_prep_ts(data,training_periods)[1]
+        t2 = train_test_data_prep_ts(data,training_periods)[1]
+        test_df = test_df.reset_index(drop = True)
+        st.write(test_values)
+        for i in models_without_average:
+            test_df[i]=test_values[i]
+        test_df.index=t2.index 
+        #test_df.index= pd.DataFrame(index=t2.index)
+        st.write(test_df)
+        # test_df = pd.concat([test_df, test_values], axis=1)
+
         
+        st.write(test_df["ARIMA"])
+        test_df['Average']=test_df[models_without_average].mean(axis=1)
+        st.write(test_df)
+        # mapping of models with their predictions in the future
+        prediction_values = {models[0]:ar_prediction(data,d,forecast_periods),
+                             models[1]:sarima_prediction(data,d,forecast_periods),
+                             models[2]:ma12_prediction(data,forecast_periods),
+                             models[3]:rf_prediction(reg_model_data_generator(data,forecast_periods)[0],reg_model_data_generator(data,forecast_periods)[1],reg_model_data_generator(data,forecast_periods)[2]),
+                             models[4]:xgb_prediction(reg_model_data_generator(data,forecast_periods)[0],reg_model_data_generator(data,forecast_periods)[1],reg_model_data_generator(data,forecast_periods)[2])}
+        st.write(test_values)
+        # Dictionary is created that maps the metric to a numeric value
+        mapping_dict = {list_of_metrics[0]:0,list_of_metrics[1]:1,list_of_metrics[2]:2}
+        st.write(mapping_dict)
+        user_input_metric=st.radio("Navigation",list_of_metrics)
+        metric_index = mapping_dict[user_input_metric] #storing the index of metrics
+        st.write(test_df,models,metric_index,d)
+        index_of_winner_model = win(test_df,models,metric_index,d) #storing the index of winner model
+        display_winning_model(models,index_of_winner_model) #Display the name of winner model
+        #Creating a Data Frame of predictions of all the models including the average of all models
+        predict_df = pd.DataFrame(prediction_values[models[0]],columns=[models[0]])
+        for i in range(1,len(models_without_average)):
+            predict_df[models_without_average[i]]=prediction_values[models_without_average[i]]
+        predict_df['Average']=predict_df[models_without_average].mean(axis=1)
+        predict_df = predict_df.round(2)
+        metrics_df = metrics_table(data,test_df,train_test_data_prep_ts(data,training_periods)[1][d],list_of_metrics,models,d)
+        st.write(metrics_df)
+        fig1 = plt.figure(figsize=(15,6))
+        plt.plot(train_test_data_prep_ts(data,training_periods)[1])
+        plt.plot(test_df[models[index_of_winner_model]])
+        plt.legend(["Actual","Prediction"], loc ="lower right")
+        st.pyplot(fig1)
+        fig2 = plt.figure(figsize=(20,6))
+        plt.plot(data[d])
+        plt.plot(predict_df[models[index_of_winner_model]])
+        plt.legend(["Actual","Prediction"], loc ="upper right")
+        st.pyplot(fig2)
+        prediciton = predict_df[models[index_of_winner_model]]
+        # prediciton.rename(columns = {models[index_of_winner_model]:d}, inplace = True)
+        st.download_button("Download Output",prediciton.to_csv(),file_name = "Your_Output.csv",mime='text/csv')
+            
 
 
 
