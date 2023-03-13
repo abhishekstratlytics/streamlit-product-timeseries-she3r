@@ -231,8 +231,8 @@ def main():
         # z = xgb_prediction(train_test_data_prep_reg(data,periods_of_forecast,training_periods)[0],
         #                     train_test_data_prep_reg(data,periods_of_forecast,training_periods)[2],
         #                     train_test_data_prep_reg(data,periods_of_forecast,training_periods)[1])
-        z = ar_prediction(data,d,forecast_periods)
-        st.write(z)
+        #z = ar_prediction(data,d,forecast_periods)
+        #st.write(z)
         models = ['ARIMA','SARIMA','Moving Average','Random Forest','XGBoost','Average'] #Change here when add/delete model
         models_without_average = ['ARIMA','SARIMA','Moving Average','Random Forest','XGBoost'] #Change here when add/delete model
         list_of_metrics=['RMSE','MAPE','MAE'] #Change here when add/delete metric
@@ -240,35 +240,35 @@ def main():
         test_values = pd.DataFrame(test_values)
         
         test_values = test_values.reset_index(drop=True)
-        st.write(test_values)
+        #st.write(test_values)
         test_df = train_test_data_prep_ts(data,training_periods)[1]
         t2 = train_test_data_prep_ts(data,training_periods)[1]
         test_df = test_df.reset_index(drop = True)
-        st.write(test_values)
+        #st.write(test_values)
         for i in models_without_average:
             test_df[i]=test_values[i]
         test_df.index=t2.index 
         #test_df.index= pd.DataFrame(index=t2.index)
-        st.write(test_df)
+        #st.write(test_df)
         # test_df = pd.concat([test_df, test_values], axis=1)
 
         
         st.write(test_df["ARIMA"])
         test_df['Average']=test_df[models_without_average].mean(axis=1)
-        st.write(test_df)
+        #st.write(test_df)
         # mapping of models with their predictions in the future
         prediction_values = {models[0]:ar_prediction(data,d,forecast_periods),
                              models[1]:sarima_prediction(data,d,forecast_periods),
                              models[2]:ma12_prediction(data,forecast_periods),
                              models[3]:rf_prediction(reg_model_data_generator(data,forecast_periods)[0],reg_model_data_generator(data,forecast_periods)[1],reg_model_data_generator(data,forecast_periods)[2]),
                              models[4]:xgb_prediction(reg_model_data_generator(data,forecast_periods)[0],reg_model_data_generator(data,forecast_periods)[1],reg_model_data_generator(data,forecast_periods)[2])}
-        st.write(test_values)
+        #st.write(test_values)
         # Dictionary is created that maps the metric to a numeric value
         mapping_dict = {list_of_metrics[0]:0,list_of_metrics[1]:1,list_of_metrics[2]:2}
         st.write(mapping_dict)
         user_input_metric=st.radio("Navigation",list_of_metrics)
         metric_index = mapping_dict[user_input_metric] #storing the index of metrics
-        st.write(test_df,models,metric_index,d)
+        #st.write(test_df,models,metric_index,d)
         index_of_winner_model = win(test_df,models,metric_index,d) #storing the index of winner model
         display_winning_model(models,index_of_winner_model) #Display the name of winner model
         #Creating a Data Frame of predictions of all the models including the average of all models
