@@ -253,7 +253,7 @@ def main():
         # test_df = pd.concat([test_df, test_values], axis=1)
 
         
-        st.write(test_df["ARIMA"])
+        #st.write(test_df["ARIMA"])
         test_df['Average']=test_df[models_without_average].mean(axis=1)
         #st.write(test_df)
         # mapping of models with their predictions in the future
@@ -265,7 +265,7 @@ def main():
         #st.write(test_values)
         # Dictionary is created that maps the metric to a numeric value
         mapping_dict = {list_of_metrics[0]:0,list_of_metrics[1]:1,list_of_metrics[2]:2}
-        st.write(mapping_dict)
+        #st.write(mapping_dict)
         user_input_metric=st.radio("Navigation",list_of_metrics)
         metric_index = mapping_dict[user_input_metric] #storing the index of metrics
         #st.write(test_df,models,metric_index,d)
@@ -292,19 +292,64 @@ def main():
         prediciton = predict_df[models[index_of_winner_model]]
         # prediciton.rename(columns = {models[index_of_winner_model]:d}, inplace = True)
         st.download_button("Download Output",prediciton.to_csv(),file_name = "Your_Output.csv",mime='text/csv')
-            
-
-
-
-
-  
-        
-
 
 
     else:
         st.write("All SKU Prediction")
-    
+        sales_multi =data.copy()
+        l=list(data.columns)
+        del l[0]
+        ## Input Data Selection
+        d=st.selectbox("Select your Product",l)
+        data = data[['Time',d]]
+        data=data.set_index("Time")
+        ## Testing period Selection       
+        testing_periods = st.slider("Weeks of testing/validating:",4,12,6)
+        training_periods = len(sales_multi)-testing_periods
+        ## Output Period Selection
+        periods_of_forecast= st.slider("Weeks of prediction:",4,12,6)
+        forecast_periods = periods_of_forecast
+        list_of_metrics=['RMSE','MAPE','MAE']
+        mapping_dict = {list_of_metrics[0]:0,list_of_metrics[1]:1,list_of_metrics[2]:2}
+        pred_multi = pd.DataFrame(columns=[sales_multi.columns[1:]])
+        #st.write(mapping_dict)
+        
+        user_input_metric=st.radio("Navigation",list_of_metrics)
+        models = ['ARIMA','SARIMA','Moving Average','Random Forest','XGBoost','Average'] #Change here when add/delete model
+        models_without_average = ['ARIMA','SARIMA','Moving Average','Random Forest','XGBoost'] #Change here when add/delete model
+        for d in sales_multi.columns[1:]:
+
+        # mapping of models with their predictions in the test period
+            data = sales_multi[[d]]
+            test_values = {models[0]:ar_prediction(train_test_data_prep_ts(data,training_periods)[0],d,len(train_test_data_prep_ts(data,training_periods)[1])),\
+                        models[1]:sarima_prediction(train_test_data_prep_ts(data,training_periods)[0],d,len(train_test_data_prep_ts(data,training_periods)[1])),\
+                        models[2]:ma12_prediction(train_test_data_prep_ts(data,training_periods)[0],len(train_test_data_prep_ts(data,training_periods)[1])),\
+                        models[3]: rf_prediction(train_test_data_prep_reg(data,forecast_periods,training_periods)[0],train_test_data_prep_reg(data,forecast_periods,training_periods)[2],train_test_data_prep_reg(data,forecast_periods,training_periods)[1]),\
+                        models[4]:xgb_prediction(train_test_data_prep_reg(data,forecast_periods,training_periods)[0],train_test_data_prep_reg(data,forecast_periods,training_periods)[2],train_test_data_prep_reg(data,forecast_periods,training_periods)[1])}
+            # creating a data frame of predictions of all models including the average model
+            test_df = train_test_data_prep_ts(data,training_periods)[1]
+            for i in models_without_average:
+                test_df[i]=test_values[i]
+            test_df['Average']=test_df[models_without_average].mean(axis=1)
+            # mapping of models with their predictions in the future
+            prediction_values = {models[0]:ar_prediction(data,d,forecast_periods),\
+                                models[1]:sarima_prediction(data,d,forecast_periods),\
+                                models[2]:ma12_prediction(data,forecast_periods),\
+                                models[3]: rf_prediction(reg_model_data_generator(data,forecast_periods)[0],reg_model_data_generator(data,forecast_periods)[1],reg_model_data_generator(data,forecast_periods)[2]),\
+                                models[4]:xgb_prediction(reg_model_data_generator(data,forecast_periods)[0],reg_model_data_generator(data,forecast_periods)[1],reg_model_data_generator(data,forecast_periods)[2])}
+            # Dictionary is created that maps the metric to a numeric value
+            metric_index = mapping_dict[user_input_metric]
+            index_of_winner_model = win(test_df,models,metric_index,d) #storing the index of winner model
+            display_winning_model(models,index_of_winner_model) #Display the name of winner model
+            #Creating a Data Frame of predictions of all the models including the average of all models
+            predict_df = pd.DataFrame(prediction_values[models[0]],columns=[models[0]])
+            for i in range(1,len(models_without_average)):
+                predict_df[models_without_average[i]]=prediction_values[models_without_average[i]]
+            predict_df['Average']=predict_df[models_without_average].mean(axis=1)
+            # Display predictions and plots
+            pred_multi[d] = predict_df[models[index_of_winner_model]]
+        st.write(pred_multi)
+        st.download_button("Download All Output",pred_multi.to_csv(),file_name = "All_SKU_Output.csv",mime='text/csv')
 
 
 
