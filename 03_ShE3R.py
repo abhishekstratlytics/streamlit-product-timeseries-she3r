@@ -174,6 +174,7 @@ def main():
         data = pd.read_csv(uploaded_file)
     else:
         data = pd.read_csv("Weekly_Sales.csv")
+    data.rename(columns={ data.columns[0]: "Time" }, inplace = True)
 
 
     if nav == "HOME":
