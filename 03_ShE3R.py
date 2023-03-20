@@ -193,7 +193,7 @@ def main():
         #st.line_chart(data,x='Time',y=d)
 
         st.write("Relative Product Performance")
-        col2=st.multiselect("Select Products for Comparision",l,[l[0])
+        col2=st.multiselect("Select Products for Comparision",l,[l[0]])
         #plt.plot(data2['num'],data2[col2])
         st.line_chart(data,x='Time',y=col2)
         #st.pyplot()
