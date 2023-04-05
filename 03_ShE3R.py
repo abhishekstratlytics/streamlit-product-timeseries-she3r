@@ -175,7 +175,7 @@ def main():
     else:
         data = pd.read_csv("Weekly_Sales.csv")
     data.rename(columns={ data.columns[0]: "Time" }, inplace = True)
-    data.sort_values("Time",inplace=True)
+    #data.sort_values("Time",inplace=True)
 
 
     if nav == "HOME":
